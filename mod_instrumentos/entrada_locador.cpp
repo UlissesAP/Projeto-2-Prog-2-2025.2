@@ -2,7 +2,7 @@
 
 using namespace std;
 
-void janela_locador() {
+void janela_locador(login_info info) {
     int escolha = -1;
     while (escolha != 0) {
         cout << "\nGerenciador de Empréstimos de Instrumentos\n";

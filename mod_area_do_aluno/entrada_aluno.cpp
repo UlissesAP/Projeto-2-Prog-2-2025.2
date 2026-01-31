@@ -2,7 +2,7 @@
 
 using namespace std;
 
-void janela_aluno() {
+void janela_aluno(login_info info) {
     int escolha = -1;
     while (escolha != 0) {
         cout << "\nPainel do Aluno\n";

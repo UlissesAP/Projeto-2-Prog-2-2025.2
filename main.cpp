@@ -51,23 +51,23 @@ int main() {
             switch (info.info_basica.categoria) {
                 case ALUNO:
                     cout << "Aluno\n";
-                    janela_aluno();
+                    janela_aluno(info);
                     break;
                 case PROFESSOR:
                     cout << "Professor\n";
-                    janela_professor();
+                    janela_professor(info);
                     break;
                 case ADMIN:
                     cout << "Administrador\n";
-                    janela_admin();
+                    janela_admin(info);
                     break;
                 case VENDEDOR:
                     cout << "Vendedor\n";
-                    janela_vendedor();
+                    janela_vendedor(info);
                     break;
                 case LOCADOR:
                     cout << "Locador\n";
-                    janela_locador();
+                    janela_locador(info);
                     break;  
                 default:
                     cout << "TIPO DE USUARIO DESCONHECIDO\n";

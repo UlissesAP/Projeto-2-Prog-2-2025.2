@@ -3,7 +3,7 @@
 
 using namespace std;
 
-void janela_admin() {
+void janela_admin(login_info info) {
     int i = 0;
     int escolha = -1;
     while (escolha != 0) {

@@ -2,7 +2,7 @@
 
 using namespace std;
 
-void janela_gerenciar_eventos() {
+void janela_gerenciar_eventos(login_info info) {
     int escolha = -1;
     while (escolha != 0) {
         cout << "\nGerenciamento de Eventos\n";
@@ -33,7 +33,7 @@ void janela_gerenciar_eventos() {
     }
 }
 
-void janela_professor() {
+void janela_professor(login_info info) {
     int escolha = -1;
     while (escolha != 0) {
         cout << "\nPainel do Professor\n";
@@ -48,7 +48,7 @@ void janela_professor() {
         
         switch (escolha) {
             case 1:
-                janela_gerenciar_eventos();
+                janela_gerenciar_eventos(info);
                 break;
             case 2:
                 cout << "Lançar notas...\n";

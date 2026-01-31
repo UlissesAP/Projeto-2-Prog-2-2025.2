@@ -2,7 +2,7 @@
 
 using namespace std;
 
-void janela_vendedor() {
+void janela_vendedor(login_info info) {
     int escolha = -1;
     while (escolha != 0) {
         cout << "\nGerenciador de Lanchonete\n";
