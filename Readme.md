@@ -93,6 +93,39 @@ O sistema foi arquitetado em **módulos independentes** que se comunicam entre s
 
 ---
 
+## 👥 Tipos de Usuários (Cargos)
+
+O sistema suporta os seguintes cargos com diferentes permissões:
+
+1. **ALUNO** - Discente
+   - Visualiza: histórico, notas, horários, turmas
+   - Acessa: compra de produtos, empréstimo de instrumentos, inscrição em eventos
+
+2. **PROFESSOR** - Docente
+   - Visualiza: turmas, alunos, horários
+   - Funcionalidades: lançar notas, registrar frequência
+   - **Pode criar eventos** via `mod_eventos/entrada_eventos.cpp`
+   - Acessa: compra de produtos, empréstimo de instrumentos
+
+3. **ADMIN** - Administrador
+   - Funcionalidades: gerenciar usuários, turmas, horários
+   - Pode movimentar alunos entre turmas
+   - Acesso a operações especiais
+
+4. **VENDEDOR** - Gerencia Lanchonete
+   - Funcionalidades: cadastro de produtos, preços, quantidades
+   - Fornece: `servico_venda` para todos
+
+5. **LOCADOR** - Gerencia Instrumentos
+   - Funcionalidades: cadastro de instrumentos, quantidades
+   - Fornece: `servico_emprestimo` para todos
+
+⚠️ **IMPORTANTE:** 
+- **EVENTOS NÃO É UM CARGO**, é um sub-módulo acessado por PROFESSOR (criar) e por todos via `servico_inscricao_evento` (se inscrever)
+- Todos os cargos podem acessar os **serviços compartilhados** (venda, empréstimo, inscrição em eventos)
+
+---
+
 ## 🏗️ Arquitetura dos Módulos
 
 ### **1. `mod_login_e_matricula/`**
@@ -261,21 +294,7 @@ O sistema foi arquitetado em **módulos independentes** que se comunicam entre s
 
 ---
 
-## 👥 Tipos de Usuários (Cargos)
-
-O sistema suporta os seguintes cargos com diferentes permissões:
-
-1. **ALUNO** - Discente
-2. **PROFESSOR** - Docente (pode criar eventos via `mod_eventos`)
-3. **ADMIN** - Administrador
-4. **VENDEDOR** - Gerencia cantina
-5. **LOCADOR** - Gerencia empréstimos
-
-⚠️ **NOTA:** `mod_eventos` **NÃO é um cargo**. É um **SUB-MÓDULO do PROFESSOR** que todos podem acessar para se inscrever em eventos via `servico_inscricao_evento.cpp`
-
----
-
-## 🔐 Configuração de Login (servico_login.cpp)
+##  Configuração de Login (servico_login.cpp)
 
 ⚠️ **IMPORTANTE:** O arquivo `mod_login_e_matricula/servico_login.cpp` atualmente retorna um login **engessado (hardcoded)** sempre com ADMIN.
 
