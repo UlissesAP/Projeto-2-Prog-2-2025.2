@@ -2,68 +2,40 @@
 #define INSTRUMENTOS_H
 
 #include <iostream>
-#include <fstream>
-#include <cstring>
-#include "login_matricula.h" // Dependência do módulo de alunos
+// Inclui o header do modulo de login para acessar as structs e funções do aluno
+#include "login_matricula.h" 
 
 using namespace std;
 
-// Constantes de configuração
-#define ARQUIVO_INSTRUMENTOS "instrumentos.dat"
-#define CAPACIDADE_INICIAL 10
-#define FATOR_CRESCIMENTO 2
+// Constantes
 #define TAM_NOME 30
 
-// Constantes de Status
-#define INATIVO 0
-#define ATIVO 1
-
-// --- Definição das Structs ---
-
-// Nota: A struct Aluno vem de login_matricula.h, mas assumimos que ela tenha:
-// int idInstrumento; char turma;
-
+// Struct do Instrumento (Definição única)
 struct Instrumento {
     int id;
     int ativo;
     int autorizado;
     char nome[TAM_NOME];
-    char turma;           // NOVO: Define qual turma pode pegar este instrumento (ex: 'A', 'B')
-    bool disponivel;      // Definido pelo estoque
-    int estoque;
-    int idAluno;          // ID do último aluno que pegou (para rastreabilidade do item físico)
+    char turma;        // Turma a que o instrumento pertence (A, B, C...)
+    bool disponivel;   // Calculado com base no estoque
+    int estoque;       // Quantidade física disponível
+    int idAluno;       // ID do último aluno que pegou (controle)
 };
 
-struct GerenciadorInstrumentos {
-    Instrumento** lista;
-    int quantidade;
-    int capacidade;
-};
+// --- Funções de Sistema ---
+void inicializarInstrumentos(); // Carrega dados
+void finalizarInstrumentos();   // Salva dados
 
-// --- Funções de Memória ---
-void inicializarGerenciador(GerenciadorInstrumentos* gerenciador);
-void finalizarGerenciador(GerenciadorInstrumentos* gerenciador);
+// --- Funções de CRUD ---
+void cadastrarInstrumento();
+void listarInstrumentos();
+void excluirInstrumento();
 
-// --- Persistência ---
-void carregarDoArquivo(GerenciadorInstrumentos* gerenciador);
-void salvarNoArquivo(GerenciadorInstrumentos* gerenciador);
-
-// --- CRUD ---
-int cadastrarInstrumento(GerenciadorInstrumentos* gerenciador, const char* nome, char turma, int estoque);
-Instrumento* buscarInstrumentoPorId(GerenciadorInstrumentos* gerenciador, int id);
-int editarInstrumento(GerenciadorInstrumentos* gerenciador, int id, const char* novoNome);
-int excluirInstrumento(GerenciadorInstrumentos* gerenciador, int id);
-
-// --- Lógica de Empréstimo (Integração com Login_Mat) ---
-int registrarEmprestimo(GerenciadorInstrumentos* gerenciador, int idInstrumento, int idAluno);
-int registrarDevolucao(GerenciadorInstrumentos* gerenciador, int idAluno);
-
-// --- Relatórios ---
-void listarInstrumentos(GerenciadorInstrumentos* gerenciador);
-void listarDisponiveis(GerenciadorInstrumentos* gerenciador);
-void imprimirInstrumento(Instrumento* inst);
+// --- Funções de Empréstimo ---
+void realizarEmprestimo();
+void realizarDevolucao();
 
 // --- Menu ---
-void menuInstrumentos(GerenciadorInstrumentos* gerenciador);
+void menuInstrumentos();
 
 #endif
