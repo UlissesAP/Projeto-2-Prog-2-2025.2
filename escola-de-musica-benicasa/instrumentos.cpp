@@ -1,295 +1,258 @@
 #include "instrumentos.h"
+#include <fstream>
+#include <cstring>
 
-// --- Funções Auxiliares de Memória ---
+using namespace std;
 
-void expandirCapacidadeInstrumentos(GerenciadorInstrumentos* gerenciador) {
-    int novaCapacidade = gerenciador->capacidade * FATOR_CRESCIMENTO;
-    Instrumento** novaLista = new Instrumento*[novaCapacidade];
-    
-    for (int i = 0; i < gerenciador->quantidade; i++) {
-        novaLista[i] = gerenciador->lista[i];
-    }
+// --- Variáveis Globais do Módulo (Simplificação) ---
+// Em vez de um struct Gerenciador complexo, usamos um array estático simples.
+const int MAX_INSTRUMENTOS = 100; // Limite simples
+Instrumento listaInstrumentos[MAX_INSTRUMENTOS];
+int quantidadeInstrumentos = 0;
 
-    delete[] gerenciador->lista;
-    gerenciador->lista = novaLista;
-    gerenciador->capacidade = novaCapacidade;
-}
+const char* ARQUIVO_DADOS = "instrumentos.dat";
 
-// --- Inicialização e Encerramento ---
+// --- Funções Auxiliares de Arquivo ---
 
-void inicializarGerenciador(GerenciadorInstrumentos* gerenciador) {
-    gerenciador->lista = new Instrumento*[CAPACIDADE_INICIAL];
-    gerenciador->quantidade = 0;
-    gerenciador->capacidade = CAPACIDADE_INICIAL;
-    carregarDoArquivo(gerenciador);
-}
+void carregarDados() {
+    ifstream file(ARQUIVO_DADOS, ios::binary);
+    if (!file.is_open()) return; // Arquivo não existe ainda
 
-void finalizarGerenciador(GerenciadorInstrumentos* gerenciador) {
-    salvarNoArquivo(gerenciador);
-    for (int i = 0; i < gerenciador->quantidade; i++) {
-        delete gerenciador->lista[i];
-    }
-    delete[] gerenciador->lista;
-    gerenciador->lista = NULL;
-    gerenciador->quantidade = 0;
-}
+    // Lê a quantidade primeiro (salvamos no início do arquivo)
+    file.read((char*)&quantidadeInstrumentos, sizeof(int));
 
-// --- Persistência ---
-
-void carregarDoArquivo(GerenciadorInstrumentos* gerenciador) {
-    ifstream file(ARQUIVO_INSTRUMENTOS, ios::binary | ios::ate);
-    if (!file.is_open()) return;
-
-    streampos tamanho = file.tellg();
-    int qtd_registros = tamanho / sizeof(Instrumento);
-    file.seekg(0, ios::beg);
-
-    while (gerenciador->capacidade < qtd_registros) {
-        expandirCapacidadeInstrumentos(gerenciador);
-    }
-
-    for (int i = 0; i < qtd_registros; i++) {
-        gerenciador->lista[i] = new Instrumento;
-        file.read((char*)gerenciador->lista[i], sizeof(Instrumento));
-        gerenciador->quantidade++;
+    // Lê o array inteiro de uma vez (mais simples e rápido)
+    if (quantidadeInstrumentos > 0) {
+        file.read((char*)listaInstrumentos, quantidadeInstrumentos * sizeof(Instrumento));
     }
     file.close();
 }
 
-void salvarNoArquivo(GerenciadorInstrumentos* gerenciador) {
-    ofstream file(ARQUIVO_INSTRUMENTOS, ios::binary | ios::trunc);
-    if (!file.is_open()) return;
+void salvarDados() {
+    ofstream file(ARQUIVO_DADOS, ios::binary | ios::trunc);
+    if (!file.is_open()) {
+        cout << "Erro ao salvar arquivo de instrumentos!" << endl;
+        return;
+    }
+
+    // Salva a quantidade primeiro
+    file.write((char*)&quantidadeInstrumentos, sizeof(int));
     
-    for (int i = 0; i < gerenciador->quantidade; i++) {
-        file.write((char*)gerenciador->lista[i], sizeof(Instrumento));
+    // Salva o array inteiro
+    if (quantidadeInstrumentos > 0) {
+        file.write((char*)listaInstrumentos, quantidadeInstrumentos * sizeof(Instrumento));
     }
     file.close();
+}
+
+// --- Inicialização e Finalização ---
+
+void inicializarInstrumentos() {
+    carregarDados();
+}
+
+void finalizarInstrumentos() {
+    salvarDados();
+}
+
+// --- Funções de Busca Auxiliares ---
+
+int buscarIndicePorId(int id) {
+    for (int i = 0; i < quantidadeInstrumentos; i++) {
+        if (listaInstrumentos[i].id == id && listaInstrumentos[i].ativo == 1) {
+            return i;
+        }
+    }
+    return -1; // Não encontrado
 }
 
 // --- CRUD ---
 
-int cadastrarInstrumento(GerenciadorInstrumentos* gerenciador, const char* nome, char turma, int estoque) {
-    if (gerenciador->quantidade >= gerenciador->capacidade) {
-        expandirCapacidadeInstrumentos(gerenciador);
+void cadastrarInstrumento() {
+    if (quantidadeInstrumentos >= MAX_INSTRUMENTOS) {
+        cout << "Limite de instrumentos atingido!" << endl;
+        return;
     }
 
-    Instrumento* novo = new Instrumento;
+    Instrumento novo;
     
-    int maxId = 0;
-    for (int i = 0; i < gerenciador->quantidade; i++) {
-        if (gerenciador->lista[i]->id > maxId) maxId = gerenciador->lista[i]->id;
-    }
-    novo->id = maxId + 1;
-
-    strncpy(novo->nome, nome, TAM_NOME);
-    novo->nome[TAM_NOME - 1] = '\0';
+    // Geração de ID simples (sequencial baseado no último)
+    novo.id = (quantidadeInstrumentos == 0) ? 1 : listaInstrumentos[quantidadeInstrumentos - 1].id + 1;
+    novo.ativo = 1;
+    novo.autorizado = 1; // Autorizado por padrão
     
-    novo->turma = turma; // Define a turma permitida
-    novo->ativo = ATIVO;
-    novo->autorizado = 1;
-    novo->estoque = estoque;
-    novo->disponivel = (estoque > 0);
-    novo->idAluno = 0;
+    cout << "\n--- Cadastro de Instrumento ---" << endl;
+    cout << "Nome: ";
+    cin.ignore();
+    cin.getline(novo.nome, TAM_NOME);
+    
+    cout << "Turma (A, B, C...): ";
+    cin >> novo.turma;
+    
+    cout << "Quantidade em Estoque: ";
+    cin >> novo.estoque;
+    
+    novo.disponivel = (novo.estoque > 0);
+    novo.idAluno = 0; // Nenhum aluno vinculado inicialmente
 
-    gerenciador->lista[gerenciador->quantidade] = novo;
-    gerenciador->quantidade++;
-
-    salvarNoArquivo(gerenciador);
-    return novo->id;
+    listaInstrumentos[quantidadeInstrumentos] = novo;
+    quantidadeInstrumentos++;
+    
+    salvarDados(); // Salva imediatamente
+    cout << "Instrumento cadastrado com sucesso! ID: " << novo.id << endl;
 }
 
-Instrumento* buscarInstrumentoPorId(GerenciadorInstrumentos* gerenciador, int id) {
-    for (int i = 0; i < gerenciador->quantidade; i++) {
-        if (gerenciador->lista[i]->id == id && gerenciador->lista[i]->ativo == ATIVO) {
-            return gerenciador->lista[i];
+void listarInstrumentos() {
+    cout << "\n--- Lista de Instrumentos ---" << endl;
+    if (quantidadeInstrumentos == 0) {
+        cout << "Nenhum instrumento cadastrado." << endl;
+        return;
+    }
+
+    for (int i = 0; i < quantidadeInstrumentos; i++) {
+        Instrumento& it = listaInstrumentos[i];
+        if (it.ativo == 1) {
+            cout << "ID: " << it.id 
+                 << " | Nome: " << it.nome 
+                 << " | Turma: " << it.turma
+                 << " | Estoque: " << it.estoque << endl;
         }
     }
-    return NULL;
 }
 
-int editarInstrumento(GerenciadorInstrumentos* gerenciador, int id, const char* novoNome) {
-    Instrumento* inst = buscarInstrumentoPorId(gerenciador, id);
-    if (!inst) return 0;
+void excluirInstrumento() {
+    int id;
+    cout << "Digite o ID do instrumento a excluir: ";
+    cin >> id;
+
+    int idx = buscarIndicePorId(id);
+    if (idx != -1) {
+        listaInstrumentos[idx].ativo = 0; // Exclusão lógica
+        salvarDados();
+        cout << "Instrumento excluido com sucesso." << endl;
+    } else {
+        cout << "Instrumento nao encontrado." << endl;
+    }
+}
+
+// --- Lógica de Empréstimo (Integrada com Login_Mat) ---
+
+void realizarEmprestimo() {
+    int idInstrumento, idAluno;
+    cout << "\n--- Emprestimo ---" << endl;
+    cout << "ID do Instrumento: "; cin >> idInstrumento;
+    cout << "ID do Aluno: "; cin >> idAluno;
+
+    // 1. Validar Instrumento
+    int idx = buscarIndicePorId(idInstrumento);
+    if (idx == -1) {
+        cout << "Erro: Instrumento nao encontrado." << endl;
+        return;
+    }
     
-    strncpy(inst->nome, novoNome, TAM_NOME);
-    inst->nome[TAM_NOME - 1] = '\0';
-    salvarNoArquivo(gerenciador);
-    return 1;
-}
+    Instrumento& inst = listaInstrumentos[idx];
 
-int excluirInstrumento(GerenciadorInstrumentos* gerenciador, int id) {
-    Instrumento* inst = buscarInstrumentoPorId(gerenciador, id);
-    if (!inst) return 0;
-    
-    inst->ativo = INATIVO;
-    salvarNoArquivo(gerenciador);
-    return 1;
-}
+    if (inst.estoque <= 0) {
+        cout << "Erro: Estoque esgotado." << endl;
+        return;
+    }
 
-// --- Lógica de Empréstimo (Integrada) ---
-
-int registrarEmprestimo(GerenciadorInstrumentos* gerenciador, int idInstrumento, int idAluno) {
-    // 1. Validação do Instrumento
-    Instrumento* inst = buscarInstrumentoPorId(gerenciador, idInstrumento);
-    if (!inst) return -4; // Instrumento não encontrado
-    if (inst->autorizado == 0) return -5; // Não autorizado
-    if (inst->estoque <= 0) return -3;    // Sem estoque
-
-    // 2. Leitura e Validação do Aluno (Via Módulo Externo)
+    // 2. Validar Aluno (Usando o módulo Login_mat)
     Aluno aluno = Login_mat::lerAluno(idAluno);
     
-    // Verifica se o aluno existe (assumindo que ID <= 0 é inválido ou nome vazio)
-    if (aluno.base.id == 0) return 0; // Aluno não encontrado
+    // Verifica se o aluno existe (assumindo ID 0 é inválido)
+    if (aluno.base.id == 0) {
+        cout << "Erro: Aluno nao encontrado no sistema." << endl;
+        return;
+    }
 
-    // REGRA 1: Aluno já possui instrumento?
+    // 3. Regra: Aluno já tem instrumento?
     if (aluno.idInstrumento != 0) {
-        return -1; // Aluno já tem instrumento
+        cout << "Erro: Este aluno ja possui um instrumento emprestado." << endl;
+        return;
     }
 
-    // REGRA 2: A turma do aluno corresponde à do instrumento?
-    if (aluno.turma != inst->turma) {
-        return -2; // Turma incompatível
+    // 4. Regra: Turma compatível?
+    if (aluno.turma != inst.turma) {
+        cout << "Erro: Instrumento destinado a turma " << inst.turma 
+             << ", mas o aluno pertence a turma " << aluno.turma << "." << endl;
+        return;
     }
 
-    // 3. Execução do Empréstimo
-    inst->estoque--;
-    if (inst->estoque == 0) inst->disponivel = false;
-    
-    // Vincula o ID do aluno ao instrumento (para rastreabilidade do último uso)
-    inst->idAluno = idAluno;
+    // 5. Executar Empréstimo
+    inst.estoque--;
+    if (inst.estoque == 0) inst.disponivel = false;
+    inst.idAluno = idAluno; // Registra quem pegou
 
-    // 4. Atualização do Aluno (Via Módulo Externo)
-    aluno.idInstrumento = inst->id;
+    // Atualiza o Aluno no outro módulo
+    aluno.idInstrumento = inst.id;
     Login_mat::atualizar(idAluno, aluno);
 
-    salvarNoArquivo(gerenciador);
-    return 1; // Sucesso
+    salvarDados();
+    cout << "Emprestimo realizado com sucesso!" << endl;
 }
 
-int registrarDevolucao(GerenciadorInstrumentos* gerenciador, int idAluno) {
-    // 1. Leitura do Aluno
+void realizarDevolucao() {
+    int idAluno;
+    cout << "\n--- Devolucao ---" << endl;
+    cout << "ID do Aluno: "; cin >> idAluno;
+
+    // 1. Verificar Aluno
     Aluno aluno = Login_mat::lerAluno(idAluno);
-    if (aluno.base.id == 0) return 0; // Aluno não encontrado
+    if (aluno.base.id == 0) {
+        cout << "Erro: Aluno nao encontrado." << endl;
+        return;
+    }
 
-    // Verifica se o aluno tem instrumento para devolver
-    if (aluno.idInstrumento == 0) return -1; // Não tem nada para devolver
+    if (aluno.idInstrumento == 0) {
+        cout << "Erro: Este aluno nao possui instrumento para devolver." << endl;
+        return;
+    }
 
-    // 2. Busca o instrumento vinculado ao aluno
-    Instrumento* inst = buscarInstrumentoPorId(gerenciador, aluno.idInstrumento);
-    if (!inst) return -2; // Erro crítico: ID no aluno não existe na lista de instrumentos
+    // 2. Encontrar o Instrumento que o aluno tem
+    int idx = buscarIndicePorId(aluno.idInstrumento);
+    if (idx == -1) {
+        cout << "Erro critico: ID do instrumento no cadastro do aluno nao existe mais." << endl;
+        return;
+    }
 
-    // 3. Execução da Devolução
-    inst->estoque++;
-    inst->disponivel = true;
-    // Opcional: Limpar o idAluno do instrumento ou manter histórico. Vamos manter histórico do último.
+    // 3. Executar Devolução
+    Instrumento& inst = listaInstrumentos[idx];
+    inst.estoque++;
+    inst.disponivel = true;
+    inst.idAluno = 0; // Limpa
 
-    // 4. Atualização do Aluno
-    aluno.idInstrumento = 0; // Limpa o vínculo
+    // Atualiza o Aluno
+    aluno.idInstrumento = 0;
     Login_mat::atualizar(idAluno, aluno);
 
-    salvarNoArquivo(gerenciador);
-    return 1; // Sucesso
-}
-
-// --- Relatórios ---
-
-void imprimirInstrumento(Instrumento* inst) {
-    if (!inst) return;
-    
-    cout << "ID: " << inst->id 
-         << " | Nome: " << inst->nome 
-         << " | Turma: " << inst->turma
-         << " | Estoque: " << inst->estoque
-         << " | Status: " << (inst->disponivel ? "Disponivel" : "Esgotado");
-    
-    if (inst->idAluno != 0) {
-        cout << " | Ultimo ID Aluno: " << inst->idAluno;
-    }
-    cout << (inst->ativo ? "" : " (INATIVO)") << endl;
-}
-
-void listarInstrumentos(GerenciadorInstrumentos* gerenciador) {
-    cout << "\n--- Todos os Instrumentos ---" << endl;
-    for (int i = 0; i < gerenciador->quantidade; i++) {
-        imprimirInstrumento(gerenciador->lista[i]);
-    }
-}
-
-void listarDisponiveis(GerenciadorInstrumentos* gerenciador) {
-    cout << "\n--- Instrumentos Disponiveis ---" << endl;
-    for (int i = 0; i < gerenciador->quantidade; i++) {
-        if (gerenciador->lista[i]->disponivel && gerenciador->lista[i]->ativo == ATIVO) {
-            imprimirInstrumento(gerenciador->lista[i]);
-        }
-    }
+    salvarDados();
+    cout << "Devolucao realizada com sucesso!" << endl;
 }
 
 // --- Menu ---
 
-void menuInstrumentos(GerenciadorInstrumentos* gerenciador) {
+void menuInstrumentos() {
     int opcao = -1;
     while (opcao != 0) {
         cout << "\n=== MODULO INSTRUMENTOS ===" << endl;
         cout << "1. Cadastrar Instrumento" << endl;
-        cout << "2. Listar Todos" << endl;
-        cout << "3. Listar Disponiveis" << endl;
-        cout << "4. Realizar Emprestimo" << endl;
-        cout << "5. Realizar Devolucao (Por ID do Aluno)" << endl;
-        cout << "6. Excluir Instrumento" << endl;
+        cout << "2. Listar Instrumentos" << endl;
+        cout << "3. Realizar Emprestimo" << endl;
+        cout << "4. Realizar Devolucao" << endl;
+        cout << "5. Excluir Instrumento" << endl;
         cout << "0. Voltar" << endl;
         cout << "Opcao: ";
         cin >> opcao;
 
-        int id, idAluno, res;
-        char nome[TAM_NOME];
-        char turma;
-        int estoque;
-
         switch(opcao) {
-            case 1:
-                cout << "Nome do Instrumento: ";
-                cin.ignore(); cin.getline(nome, TAM_NOME);
-                cout << "Turma Destinada (A, B, C...): ";
-                cin >> turma;
-                cout << "Estoque Inicial: ";
-                cin >> estoque;
-                cadastrarInstrumento(gerenciador, nome, turma, estoque);
-                cout << "Cadastrado com sucesso." << endl;
-                break;
-
-            case 2:
-                listarInstrumentos(gerenciador);
-                break;
-
-            case 3:
-                listarDisponiveis(gerenciador);
-                break;
-
-            case 4:
-                cout << "ID do Instrumento: "; cin >> id;
-                cout << "ID do Aluno: "; cin >> idAluno;
-                res = registrarEmprestimo(gerenciador, id, idAluno);
-                if (res == 1) cout << "Emprestimo realizado!" << endl;
-                else if (res == -1) cout << "Erro: Aluno ja possui instrumento." << endl;
-                else if (res == -2) cout << "Erro: Turma do aluno incompativel." << endl;
-                else if (res == -3) cout << "Erro: Sem estoque." << endl;
-                else if (res == -4) cout << "Erro: Instrumento nao encontrado." << endl;
-                else if (res == 0) cout << "Erro: Aluno nao encontrado." << endl;
-                break;
-
-            case 5:
-                cout << "ID do Aluno: "; cin >> idAluno;
-                res = registrarDevolucao(gerenciador, idAluno);
-                if (res == 1) cout << "Devolucao realizada!" << endl;
-                else if (res == -1) cout << "Erro: Aluno nao possui instrumento para devolver." << endl;
-                else if (res == 0) cout << "Erro: Aluno nao encontrado." << endl;
-                break;
-
-            case 6:
-                cout << "ID do Instrumento: "; cin >> id;
-                if (excluirInstrumento(gerenciador, id)) cout << "Instrumento inativado." << endl;
-                else cout << "Nao encontrado." << endl;
-                break;
+            case 1: cadastrarInstrumento(); break;
+            case 2: listarInstrumentos(); break;
+            case 3: realizarEmprestimo(); break;
+            case 4: realizarDevolucao(); break;
+            case 5: excluirInstrumento(); break;
+            case 0: break;
+            default: cout << "Opcao invalida." << endl;
         }
     }
 }
