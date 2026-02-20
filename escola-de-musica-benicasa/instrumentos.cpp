@@ -4,31 +4,32 @@
 
 using namespace std;
 
-// --- Variáveis Globais do Módulo (Simplificação) ---
-// Em vez de um struct Gerenciador complexo, usamos um array estático simples.
-const int MAX_INSTRUMENTOS = 100; // Limite simples
+// --- Variáveis Globais do Módulo ---
+const int MAX_INSTRUMENTOS = 100; // Limite do array
 Instrumento listaInstrumentos[MAX_INSTRUMENTOS];
 int quantidadeInstrumentos = 0;
 
 const char* ARQUIVO_DADOS = "instrumentos.dat";
 
-// --- Funções Auxiliares de Arquivo ---
+// --- Funções Auxiliares de Arquivo (Internas) ---
 
-void carregarDados() {
+// Função para carregar dados do arquivo binário para a memória
+void carregarDadosInstrumentos() {
     ifstream file(ARQUIVO_DADOS, ios::binary);
-    if (!file.is_open()) return; // Arquivo não existe ainda
+    if (!file.is_open()) return; // Se não existir, não faz nada
 
-    // Lê a quantidade primeiro (salvamos no início do arquivo)
+    // Lê a quantidade de registros
     file.read((char*)&quantidadeInstrumentos, sizeof(int));
 
-    // Lê o array inteiro de uma vez (mais simples e rápido)
+    // Lê o array inteiro
     if (quantidadeInstrumentos > 0) {
         file.read((char*)listaInstrumentos, quantidadeInstrumentos * sizeof(Instrumento));
     }
     file.close();
 }
 
-void salvarDados() {
+// Função para salvar dados da memória para o arquivo binário
+void salvarDadosInstrumentos() {
     ofstream file(ARQUIVO_DADOS, ios::binary | ios::trunc);
     if (!file.is_open()) {
         cout << "Erro ao salvar arquivo de instrumentos!" << endl;
@@ -38,7 +39,7 @@ void salvarDados() {
     // Salva a quantidade primeiro
     file.write((char*)&quantidadeInstrumentos, sizeof(int));
     
-    // Salva o array inteiro
+    // Salva o array
     if (quantidadeInstrumentos > 0) {
         file.write((char*)listaInstrumentos, quantidadeInstrumentos * sizeof(Instrumento));
     }
@@ -48,11 +49,11 @@ void salvarDados() {
 // --- Inicialização e Finalização ---
 
 void inicializarInstrumentos() {
-    carregarDados();
+    carregarDadosInstrumentos();
 }
 
 void finalizarInstrumentos() {
-    salvarDados();
+    salvarDadosInstrumentos();
 }
 
 // --- Funções de Busca Auxiliares ---
@@ -76,14 +77,14 @@ void cadastrarInstrumento() {
 
     Instrumento novo;
     
-    // Geração de ID simples (sequencial baseado no último)
+    // Geração de ID sequencial simples
     novo.id = (quantidadeInstrumentos == 0) ? 1 : listaInstrumentos[quantidadeInstrumentos - 1].id + 1;
     novo.ativo = 1;
-    novo.autorizado = 1; // Autorizado por padrão
+    novo.autorizado = 1; 
     
     cout << "\n--- Cadastro de Instrumento ---" << endl;
     cout << "Nome: ";
-    cin.ignore();
+    cin.ignore(); // Limpa buffer residual
     cin.getline(novo.nome, TAM_NOME);
     
     cout << "Turma (A, B, C...): ";
@@ -93,12 +94,12 @@ void cadastrarInstrumento() {
     cin >> novo.estoque;
     
     novo.disponivel = (novo.estoque > 0);
-    novo.idAluno = 0; // Nenhum aluno vinculado inicialmente
+    novo.idAluno = 0; 
 
     listaInstrumentos[quantidadeInstrumentos] = novo;
     quantidadeInstrumentos++;
     
-    salvarDados(); // Salva imediatamente
+    salvarDadosInstrumentos(); // Salva imediatamente após cadastro
     cout << "Instrumento cadastrado com sucesso! ID: " << novo.id << endl;
 }
 
@@ -128,14 +129,14 @@ void excluirInstrumento() {
     int idx = buscarIndicePorId(id);
     if (idx != -1) {
         listaInstrumentos[idx].ativo = 0; // Exclusão lógica
-        salvarDados();
+        salvarDadosInstrumentos();
         cout << "Instrumento excluido com sucesso." << endl;
     } else {
         cout << "Instrumento nao encontrado." << endl;
     }
 }
 
-// --- Lógica de Empréstimo (Integrada com Login_Mat) ---
+// --- Lógica de Empréstimo ---
 
 void realizarEmprestimo() {
     int idInstrumento, idAluno;
@@ -157,11 +158,11 @@ void realizarEmprestimo() {
         return;
     }
 
-    // 2. Validar Aluno (Usando o módulo Login_mat)
+    // 2. Validar Aluno (Usando o módulo Login_mat do projeto)
     Aluno aluno = Login_mat::lerAluno(idAluno);
     
-    // Verifica se o aluno existe (assumindo ID 0 é inválido)
-    if (aluno.base.id == 0) {
+    // Verifica se o aluno existe (ID > 0 geralmente indica sucesso na leitura)
+    if (aluno.id == 0) { // Ajuste 'id' conforme a struct real do seu projeto
         cout << "Erro: Aluno nao encontrado no sistema." << endl;
         return;
     }
@@ -182,13 +183,13 @@ void realizarEmprestimo() {
     // 5. Executar Empréstimo
     inst.estoque--;
     if (inst.estoque == 0) inst.disponivel = false;
-    inst.idAluno = idAluno; // Registra quem pegou
+    inst.idAluno = idAluno; 
 
-    // Atualiza o Aluno no outro módulo
+    // Atualiza o Aluno no módulo de Login
     aluno.idInstrumento = inst.id;
     Login_mat::atualizar(idAluno, aluno);
 
-    salvarDados();
+    salvarDadosInstrumentos();
     cout << "Emprestimo realizado com sucesso!" << endl;
 }
 
@@ -199,7 +200,7 @@ void realizarDevolucao() {
 
     // 1. Verificar Aluno
     Aluno aluno = Login_mat::lerAluno(idAluno);
-    if (aluno.base.id == 0) {
+    if (aluno.id == 0) { // Ajuste 'id' conforme necessário
         cout << "Erro: Aluno nao encontrado." << endl;
         return;
     }
@@ -209,7 +210,7 @@ void realizarDevolucao() {
         return;
     }
 
-    // 2. Encontrar o Instrumento que o aluno tem
+    // 2. Encontrar o Instrumento vinculado ao aluno
     int idx = buscarIndicePorId(aluno.idInstrumento);
     if (idx == -1) {
         cout << "Erro critico: ID do instrumento no cadastro do aluno nao existe mais." << endl;
@@ -220,39 +221,12 @@ void realizarDevolucao() {
     Instrumento& inst = listaInstrumentos[idx];
     inst.estoque++;
     inst.disponivel = true;
-    inst.idAluno = 0; // Limpa
+    inst.idAluno = 0; 
 
     // Atualiza o Aluno
     aluno.idInstrumento = 0;
     Login_mat::atualizar(idAluno, aluno);
 
-    salvarDados();
+    salvarDadosInstrumentos();
     cout << "Devolucao realizada com sucesso!" << endl;
-}
-
-// --- Menu ---
-
-void menuInstrumentos() {
-    int opcao = -1;
-    while (opcao != 0) {
-        cout << "\n=== MODULO INSTRUMENTOS ===" << endl;
-        cout << "1. Cadastrar Instrumento" << endl;
-        cout << "2. Listar Instrumentos" << endl;
-        cout << "3. Realizar Emprestimo" << endl;
-        cout << "4. Realizar Devolucao" << endl;
-        cout << "5. Excluir Instrumento" << endl;
-        cout << "0. Voltar" << endl;
-        cout << "Opcao: ";
-        cin >> opcao;
-
-        switch(opcao) {
-            case 1: cadastrarInstrumento(); break;
-            case 2: listarInstrumentos(); break;
-            case 3: realizarEmprestimo(); break;
-            case 4: realizarDevolucao(); break;
-            case 5: excluirInstrumento(); break;
-            case 0: break;
-            default: cout << "Opcao invalida." << endl;
-        }
-    }
 }
