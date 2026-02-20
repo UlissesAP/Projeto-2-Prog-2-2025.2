@@ -2,10 +2,8 @@
 #define INSTRUMENTOS_H
 
 #include <iostream>
-// Inclui o header do modulo de login para acessar as structs e funções do aluno
+// Inclui o header do módulo de login para acessar as structs e funções do aluno
 #include "login_matricula.h" 
-
-using namespace std;
 
 // Constantes
 #define TAM_NOME 30
@@ -19,12 +17,12 @@ struct Instrumento {
     char turma;        // Turma a que o instrumento pertence (A, B, C...)
     bool disponivel;   // Calculado com base no estoque
     int estoque;       // Quantidade física disponível
-    int idAluno;       // ID do último aluno que pegou (controle)
+    int idAluno;       // ID do aluno que pegou o instrumento emprestado
 };
 
 // --- Funções de Sistema ---
-void inicializarInstrumentos(); // Carrega dados
-void finalizarInstrumentos();   // Salva dados
+void inicializarInstrumentos(); // Carrega dados do arquivo
+void finalizarInstrumentos();   // Salva dados no arquivo
 
 // --- Funções de CRUD ---
 void cadastrarInstrumento();
@@ -34,8 +32,5 @@ void excluirInstrumento();
 // --- Funções de Empréstimo ---
 void realizarEmprestimo();
 void realizarDevolucao();
-
-// --- Menu ---
-void menuInstrumentos();
 
 #endif
